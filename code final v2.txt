@@ -1,0 +1,1227 @@
+###################
+##2019
+###################
+
+
+*Table 1*
+
+clear
+*directory
+cd "E:\ResearchProject\Jamal Sir\Ecoli Diarrhea Decomposition\Bangladesh MICS6 SPSS Datasets"
+
+****************************************************************************
+*DATA MERGE
+****************************************************************************
+
+use "wm" , clear
+sort HH1 HH2 LN
+save "wm" , replace
+
+use "hh" , clear
+sort HH1 HH2
+save "hh" , replace
+
+use "ch" , clear
+sort HH1 HH2 LN
+save "ch" , replace
+
+
+merge using wm.dta
+tab _merge
+keep if _merge == 3
+save "ch" , replace
+drop _merge
+
+merge using hh.dta
+tab _merge
+keep if _merge == 3
+save "ch" , replace
+drop _merge
+
+********************************************************************************
+*WEIGHT, STRATA, CLUSTER VARIABLE FOR THE APPENDED DATA
+********************************************************************************
+gen wgt=chweight
+svyset [pw=wgt],psu(HH1) strata(stratum)
+
+********************************************************************************
+*Inclusion and Exclusion
+********************************************************************************
+
+
+#Residence
+tab HH6
+gen residence = .
+replace residence = 0 if HH6== 1 
+replace residence = 1 if HH6== 2
+label define residence 1 "Rural" 0 "Urban"
+label values residence residence
+tab residence
+
+
+
+#Diarrheaoutcome and key predictor
+svy: tab CA1
+gen diarrhea =CA1
+recode diarrhea 1=1
+recode diarrhea 2=0
+recode diarrhea 8/9=.
+drop if diarrhea ==.
+label define diarrhea 1 "Yes" 0 "No"
+label values diarrhea diarrhea
+tab diarrhea
+
+
+#household water test (100ml)
+replace WQ26 = . if WQ26 == 991
+replace WQ26 = . if WQ26 == 992
+drop if WQ26 == .
+gen hhwq = .
+replace hhwq = 0 if WQ26 == 0
+replace hhwq = 1 if inlist(WQ26, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+replace hhwq = 2 if WQ26>10
+label define hhwqlabel 0 "Low" 1 "Moderate" 2 "High"
+label values hhwq hhwqlabel
+tab hhwq 
+svy: tab hhwq residence, count 
+svy: tab hhwq residence, row
+
+
+#Child Age
+tab CAGE_11
+svy: tab CAGE_11 residence, count 
+svy: tab CAGE_11 residence, row
+
+
+#Child sex
+gen csex = .
+replace csex = 0 if HL4 == 1
+replace csex = 1 if HL4 == 2
+label define csexlabel 0 "Male" 1 "Female"
+label values csex csexlabel
+svy: tab csex residence, count 
+svy: tab csex residence, row
+
+
+#Height for Age Stunned.
+tab HAZ2
+replace HAZ2=. if HAZ2==99.97 | HAZ2==99.98 | HAZ2==99.99
+tab HAZ2
+gen stunned = .
+replace stunned = 0 if HAZ2<= -2
+replace stunned = 1 if HAZ2> -2
+label define stunned 0 "Yes" 1 "No" 
+label values stunned stunned
+svy: tab stunned residence, count 
+svy: tab stunned residence, row
+
+
+#Weight for Age Wasted
+tab WHZ2
+replace WHZ2=. if WHZ2==99.97 | WHZ2==99.98 | WHZ2==99.99
+tab WHZ2
+gen wasted = .
+replace wasted = 0 if WHZ2<= -2
+replace wasted = 1 if WHZ2> -2
+label define wasted 0 "Yes" 1 "No" 
+label values wasted wasted
+svy: tab wasted residence, count 
+svy: tab wasted residence, row
+
+
+*Inadequate supervision.
+recode EC3A 8=.
+recode EC3A 9=.
+recode EC3B 8=.
+recode EC3B 9=.
+generate IS1    = .
+replace  IS1    = 0 if (EC3A == 0) 
+replace  IS1    = 1 if (EC3A == 1) 
+replace  IS1    = 1 if (EC3A == 2) 
+replace  IS1    = 1 if (EC3A == 3) 
+replace  IS1    = 1 if (EC3A == 4)
+replace  IS1    = 1 if (EC3A == 5)  
+replace  IS1    = 1 if (EC3A == 6) 
+replace  IS1    = 1 if (EC3A == 7)
+
+replace  IS1    = 0 if (EC3B == 0) 
+replace  IS1    = 1 if (EC3B == 1) 
+replace  IS1    = 1 if (EC3B == 2) 
+replace  IS1    = 1 if (EC3B == 3) 
+replace  IS1    = 1 if (EC3B == 4)
+replace  IS1    = 1 if (EC3B == 5)  
+replace  IS1    = 1 if (EC3B == 6) 
+replace  IS1    = 1 if (EC3B == 7)
+
+tab IS1
+label define IS1 1 "Yes" 0 "No"
+label values IS IS1
+svy: tab IS
+tab IS residence, row
+svy: tab IS residence, row
+
+
+#Salt Iodization
+replace SA1=. if SA1==99 | SA1==9
+tab SA1
+gen si = .
+replace si = 0 if SA1<=1
+replace si = 1 if SA1==2 
+replace si = 1 if SA1==3 
+replace si = 0 if SA1>3 
+label define si 0 "No" 1 "Yes" 
+label values si si
+svy: tab si residence, count 
+svy: tab si residence, row
+
+
+#Education
+tab melevel
+replace melevel=. if melevel==9
+
+gen mel = melevel
+recode mel 0 = 0
+recode mel 1 = 1
+recode mel 2 = 2
+recode mel 3 = 3
+label define mel 0 "Pre-primary or none" 1 "Primary" 2 "Secondary" 3 "Higher secondary+"
+label values mel mel
+svy: tab mel residence, count 
+svy: tab mel residence, row
+
+
+#Mother Age
+tab WAGE
+gen mage = .
+replace mage = 0 if WAGE==1
+replace mage = 1 if WAGE==2
+replace mage = 2 if WAGE==3
+replace mage = 3 if WAGE==4
+replace mage = 4 if WAGE==5
+replace mage = 4 if WAGE==6
+replace mage = 4 if WAGE==7
+label define mage 0 "15-19" 1 "20-34" 2 "20-34" 3 "20-34" 4 "35+"
+label values mage mage
+svy: tab mage residence, count 
+svy: tab mage residence, row
+
+
+#househol member
+tab HH48
+replace HH48=. if HH48==9
+tab HH48
+gen hhmem = .
+replace hhmem = 0 if HH48<5
+replace hhmem = 1 if HH48>=5
+label define hhmem 0 "Small" 1 "Large" 
+label values hhmem hhmem
+svy: tab hhmem residence, count 
+svy: tab hhmem residence, row
+
+
+#Wealth index Status
+tab windex5
+replace windex5=. if windex5==9
+gen windex = windex5
+recode windex 1= 0
+recode windex 2= 0
+recode windex 3= 1
+recode windex 4= 2
+recode windex 5= 2
+label define windex 0 "Poor" 1 "Middle" 2 "Rich" 
+label values windex windex
+svy: tab windex residence, count 
+svy: tab windex residence, row
+
+
+#Religion
+replace HC1A=. if HC1A==9
+tab HC1A
+gen religion = HC1A
+recode religion 1 = 0
+recode religion 2 = 1
+recode religion 3 = 1
+recode religion 4 = 1
+label define religion 0 "Islam" 1 "Others" 
+label values religion religion
+svy: tab religion residence, count 
+svy: tab religion residence, row
+
+
+#household Head sex
+gen hhsex = .
+replace hhsex = 0 if HHSEX==1
+replace hhsex = 1 if HHSEX==2
+label define hhsex 0 "Male" 1 "Female"
+label values hhsex hhsex
+svy: tab religion residence, count 
+svy: tab religion residence, row
+
+
+#Household own any animals
+tab HC17
+replace HC17=. if HC17==9
+tab HC17
+gen animal = .
+replace animal = 0 if HC17==1
+replace animal = 1 if HC17==2
+label define animal 0 "Yes" 1 "No" 
+label values animal animal
+svy: tab animal residence, count 
+svy: tab animal residence, row
+
+
+#Division
+gen division = .
+replace division = 0 if HH7==10
+replace division = 1 if HH7==20
+replace division = 2 if HH7==30
+replace division = 3 if HH7==40
+replace division = 4 if HH7==45
+replace division = 5 if HH7==50
+replace division = 6 if HH7==55
+replace division = 7 if HH7==60
+label define division 0 "Barisal" 1 "Chattogram" 2 "Dhaka" 3 "Khulna" 4 "Mymensingh" 5 "Rajshahi" 6 "Rangpur" 7 "Sylhet"
+label values division division
+svy: tab division residence, count 
+svy: tab division residence, row
+
+
+#Type of toilet facility
+replace WS11=. if WS11==99
+tab WS11
+gen tf = .
+replace tf = 0 if WS11<24
+replace tf = 1 if WS11>=24 
+label define tf 0 "Improved" 1 "Unimproved" 
+label values tf tf
+svy: tab tf residence, count 
+svy: tab tf residence, row
+
+
+#Toilet facility shared
+tab WS15
+replace WS15=. if WS15==9
+tab WS15
+gen tfshared = .
+replace tfshared = 0 if WS15==1
+replace tfshared = 1 if WS15==2
+label define tfshared 0 "Yes" 1 "No" 
+label values tfshared tfshared
+svy: tab tfshared residence, count 
+svy: tab tfshared residence, row
+
+
+#source of water.
+replace WQ12 =. if WQ12 == 8
+gen sw = .
+replace sw = 0 if WQ12 == 1
+replace sw = 1 if WQ12 == 2
+replace sw = 2 if WQ12 == 3
+label define swlabel 0 "Direct from source" 1 "Covered container" 2 "Uncovered container"
+label values sw swlabel
+svy: tab sw residence, count 
+svy: tab sw residence, row
+
+
+#Source water type (100ml)
+replace WS1 = . if WS1 == 99
+gen swt = .
+replace swt = 1 if inlist(WS1, 11, 12, 13, 14, 21, 31, 41, 51, 91, 92)
+replace swt = 0 if WS1!= . & WS1 != 11 & WS1 != 12 & WS1 != 13 & WS1 != 14 & WS1 != 21 & WS1 != 31 & WS1 != 41 & WS1 != 51 & WS1 != 91 & WS1 != 92
+label define swtlabel 1 "Improved" 0 "Unimproved"
+label values swt swtlabel
+svy: tab swt residence, count 
+svy: tab swt residence, row
+
+
+#source water test (100ml).
+replace WQ27  = . if WQ27 == 991 | WQ27 ==992
+gen swq = .
+replace swq = 0 if WQ27 == 0
+replace swq = 1 if inlist(WQ27, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+replace swq = 2 if WQ27>10
+label define swqlabel 0 "Low" 1 "Moderate" 2 "High"
+label values swq swqlabel
+tab swq 
+svy: tab swq residence, count 
+svy: tab swq residence, row
+
+
+#Treat water to make safer for drinking
+tab WS9
+replace WS9=. if WS9==8 | WS9==9
+tab WS9
+gen watertreat = .
+replace watertreat = 0 if WS9==1
+replace watertreat = 1 if WS9==2
+label define watertreat 0 "Yes" 1 "No" 
+label values watertreat watertreat
+svy: tab watertreat residence, count 
+svy: tab watertreat residence, row
+
+
+
+
+
+
+
+
+
+*Only rural: Table 2
+
+clear
+*directory
+cd "E:\ResearchProject\Jamal Sir\Ecoli Diarrhea Decomposition\Bangladesh MICS6 SPSS Datasets"
+
+****************************************************************************
+*DATA MERGE
+****************************************************************************
+
+use "wm" , clear
+sort HH1 HH2 LN
+save "wm" , replace
+
+use "hh" , clear
+sort HH1 HH2
+save "hh" , replace
+
+use "ch" , clear
+sort HH1 HH2 LN
+save "ch" , replace
+
+
+merge using wm.dta
+tab _merge
+keep if _merge == 3
+save "ch" , replace
+drop _merge
+
+merge using hh.dta
+tab _merge
+keep if _merge == 3
+save "ch" , replace
+drop _merge
+
+********************************************************************************
+*WEIGHT, STRATA, CLUSTER VARIABLE FOR THE APPENDED DATA
+********************************************************************************
+gen wgt=chweight
+svyset [pw=wgt],psu(HH1) strata(stratum)
+
+********************************************************************************
+*Inclusion and Exclusion
+********************************************************************************
+
+
+#Residence
+tab HH6
+gen residence = .
+replace residence = 0 if HH6== 1 
+replace residence = 1 if HH6== 2
+label define residence 1 "Rural" 0 "Urban"
+label values residence residence
+tab residence
+keep if residence == 1
+
+
+#Diarrheaoutcome and key predictor
+svy: tab CA1
+gen diarrhea =CA1
+recode diarrhea 1=1
+recode diarrhea 2=0
+recode diarrhea 8/9=.
+drop if diarrhea ==.
+label define diarrhea 1 "Yes" 0 "No"
+label values diarrhea diarrhea
+tab diarrhea
+
+
+#household water test (100ml)
+replace WQ26 = . if WQ26 == 991
+replace WQ26 = . if WQ26 == 992
+drop if WQ26 == .
+gen hhwq = .
+replace hhwq = 0 if WQ26 == 0
+replace hhwq = 1 if inlist(WQ26, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+replace hhwq = 2 if WQ26>10
+label define hhwqlabel 0 "Low" 1 "Moderate" 2 "High"
+label values hhwq hhwqlabel
+tab hhwq 
+svy: tab hhwq diarrhea, count 
+svy: tab hhwq diarrhea, row
+
+
+#Child Age
+tab CAGE_11
+svy: tab CAGE_11 diarrhea, count 
+svy: tab CAGE_11 diarrhea, row
+
+
+#Child sex
+gen csex = .
+replace csex = 0 if HL4 == 1
+replace csex = 1 if HL4 == 2
+label define csexlabel 0 "Male" 1 "Female"
+label values csex csexlabel
+svy: tab csex residence, count 
+svy: tab csex residence, row
+
+
+#Height for Age Stunned.
+tab HAZ2
+replace HAZ2=. if HAZ2==99.97 | HAZ2==99.98 | HAZ2==99.99
+tab HAZ2
+gen stunned = .
+replace stunned = 0 if HAZ2<= -2
+replace stunned = 1 if HAZ2> -2
+label define stunned 0 "Yes" 1 "No" 
+label values stunned stunned
+svy: tab stunned residence, count 
+svy: tab stunned residence, row
+
+
+#Weight for Age Wasted
+tab WHZ2
+replace WHZ2=. if WHZ2==99.97 | WHZ2==99.98 | WHZ2==99.99
+tab WHZ2
+gen wasted = .
+replace wasted = 0 if WHZ2<= -2
+replace wasted = 1 if WHZ2> -2
+label define wasted 0 "Yes" 1 "No" 
+label values wasted wasted
+svy: tab wasted residence, count 
+svy: tab wasted residence, row
+
+
+*Inadequate supervision.
+recode EC3A 8=.
+recode EC3A 9=.
+recode EC3B 8=.
+recode EC3B 9=.
+generate IS1    = .
+replace  IS1    = 0 if (EC3A == 0) 
+replace  IS1    = 1 if (EC3A == 1) 
+replace  IS1    = 1 if (EC3A == 2) 
+replace  IS1    = 1 if (EC3A == 3) 
+replace  IS1    = 1 if (EC3A == 4)
+replace  IS1    = 1 if (EC3A == 5)  
+replace  IS1    = 1 if (EC3A == 6) 
+replace  IS1    = 1 if (EC3A == 7)
+
+replace  IS1    = 0 if (EC3B == 0) 
+replace  IS1    = 1 if (EC3B == 1) 
+replace  IS1    = 1 if (EC3B == 2) 
+replace  IS1    = 1 if (EC3B == 3) 
+replace  IS1    = 1 if (EC3B == 4)
+replace  IS1    = 1 if (EC3B == 5)  
+replace  IS1    = 1 if (EC3B == 6) 
+replace  IS1    = 1 if (EC3B == 7)
+
+tab IS1
+label define IS1 1 "Yes" 0 "No"
+label values IS IS1
+svy: tab IS
+tab IS residence, row
+svy: tab IS residence, row
+
+
+#Salt Iodization
+replace SA1=. if SA1==99 | SA1==9
+tab SA1
+gen si = .
+replace si = 0 if SA1<=1
+replace si = 1 if SA1==2 
+replace si = 1 if SA1==3 
+replace si = 0 if SA1>3 
+label define si 0 "No" 1 "Yes" 
+label values si si
+svy: tab si residence, count 
+svy: tab si residence, row
+
+
+#Education
+tab melevel
+replace melevel=. if melevel==9
+
+gen mel = melevel
+recode mel 0 = 0
+recode mel 1 = 1
+recode mel 2 = 2
+recode mel 3 = 3
+label define mel 0 "Pre-primary or none" 1 "Primary" 2 "Secondary" 3 "Higher secondary+"
+label values mel mel
+svy: tab mel residence, count 
+svy: tab mel residence, row
+
+
+#Mother Age
+tab WAGE
+gen mage = .
+replace mage = 0 if WAGE==1
+replace mage = 1 if WAGE==2
+replace mage = 2 if WAGE==3
+replace mage = 3 if WAGE==4
+replace mage = 4 if WAGE==5
+replace mage = 4 if WAGE==6
+replace mage = 4 if WAGE==7
+label define mage 0 "15-19" 1 "20-34" 2 "20-34" 3 "20-34" 4 "35+"
+label values mage mage
+svy: tab mage residence, count 
+svy: tab mage residence, row
+
+
+#househol member
+tab HH48
+replace HH48=. if HH48==9
+tab HH48
+gen hhmem = .
+replace hhmem = 0 if HH48<5
+replace hhmem = 1 if HH48>=5
+label define hhmem 0 "Small" 1 "Large" 
+label values hhmem hhmem
+svy: tab hhmem residence, count 
+svy: tab hhmem residence, row
+
+
+#Wealth index Status
+tab windex5
+replace windex5=. if windex5==9
+gen windex = windex5
+recode windex 1= 0
+recode windex 2= 0
+recode windex 3= 1
+recode windex 4= 2
+recode windex 5= 2
+label define windex 0 "Poor" 1 "Middle" 2 "Rich" 
+label values windex windex
+svy: tab windex residence, count 
+svy: tab windex residence, row
+
+
+#Religion
+replace HC1A=. if HC1A==9
+tab HC1A
+gen religion = HC1A
+recode religion 1 = 0
+recode religion 2 = 1
+recode religion 3 = 1
+recode religion 4 = 1
+label define religion 0 "Islam" 1 "Others" 
+label values religion religion
+svy: tab religion residence, count 
+svy: tab religion residence, row
+
+
+#household Head sex
+gen hhsex = .
+replace hhsex = 0 if HHSEX==1
+replace hhsex = 1 if HHSEX==2
+label define hhsex 0 "Male" 1 "Female"
+label values hhsex hhsex
+svy: tab religion residence, count 
+svy: tab religion residence, row
+
+
+#Household own any animals
+tab HC17
+replace HC17=. if HC17==9
+tab HC17
+gen animal = .
+replace animal = 0 if HC17==1
+replace animal = 1 if HC17==2
+label define animal 0 "Yes" 1 "No" 
+label values animal animal
+svy: tab animal residence, count 
+svy: tab animal residence, row
+
+
+#Division
+gen division = .
+replace division = 0 if HH7==10
+replace division = 1 if HH7==20
+replace division = 2 if HH7==30
+replace division = 3 if HH7==40
+replace division = 4 if HH7==45
+replace division = 5 if HH7==50
+replace division = 6 if HH7==55
+replace division = 7 if HH7==60
+label define division 0 "Barisal" 1 "Chattogram" 2 "Dhaka" 3 "Khulna" 4 "Mymensingh" 5 "Rajshahi" 6 "Rangpur" 7 "Sylhet"
+label values division division
+svy: tab division residence, count 
+svy: tab division residence, row
+
+
+#Type of toilet facility
+replace WS11=. if WS11==99
+tab WS11
+gen tf = .
+replace tf = 0 if WS11<24
+replace tf = 1 if WS11>=24 
+label define tf 0 "Improved" 1 "Unimproved" 
+label values tf tf
+svy: tab tf residence, count 
+svy: tab tf residence, row
+
+
+#Toilet facility shared
+tab WS15
+replace WS15=. if WS15==9
+tab WS15
+gen tfshared = .
+replace tfshared = 0 if WS15==1
+replace tfshared = 1 if WS15==2
+label define tfshared 0 "Yes" 1 "No" 
+label values tfshared tfshared
+svy: tab tfshared residence, count 
+svy: tab tfshared residence, row
+
+
+#source of water.
+replace WQ12 =. if WQ12 == 8
+gen sw = .
+replace sw = 0 if WQ12 == 1
+replace sw = 1 if WQ12 == 2
+replace sw = 2 if WQ12 == 3
+label define swlabel 0 "Direct from source" 1 "Covered container" 2 "Uncovered container"
+label values sw swlabel
+svy: tab sw residence, count 
+svy: tab sw residence, row
+
+
+#Source water type (100ml)
+replace WS1 = . if WS1 == 99
+gen swt = .
+replace swt = 1 if inlist(WS1, 11, 12, 13, 14, 21, 31, 41, 51, 91, 92)
+replace swt = 0 if WS1!= . & WS1 != 11 & WS1 != 12 & WS1 != 13 & WS1 != 14 & WS1 != 21 & WS1 != 31 & WS1 != 41 & WS1 != 51 & WS1 != 91 & WS1 != 92
+label define swtlabel 1 "Improved" 0 "Unimproved"
+label values swt swtlabel
+svy: tab swt residence, count 
+svy: tab swt residence, row
+
+
+#source water test (100ml).
+replace WQ27  = . if WQ27 == 991 | WQ27 ==992
+gen swq = .
+replace swq = 0 if WQ27 == 0
+replace swq = 1 if inlist(WQ27, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+replace swq = 2 if WQ27>10
+label define swqlabel 0 "Low" 1 "Moderate" 2 "High"
+label values swq swqlabel
+tab swq 
+svy: tab swq residence, count 
+svy: tab swq residence, row
+
+
+#Treat water to make safer for drinking
+tab WS9
+replace WS9=. if WS9==8 | WS9==9
+tab WS9
+gen watertreat = .
+replace watertreat = 0 if WS9==1
+replace watertreat = 1 if WS9==2
+label define watertreat 0 "Yes" 1 "No" 
+label values watertreat watertreat
+svy: tab watertreat residence, count 
+svy: tab watertreat residence, row
+
+
+
+*Only Urban: Table 2
+
+clear
+*directory
+cd "E:\ResearchProject\Jamal Sir\Ecoli Diarrhea Decomposition\Bangladesh MICS6 SPSS Datasets"
+
+****************************************************************************
+*DATA MERGE
+****************************************************************************
+
+use "wm" , clear
+sort HH1 HH2 LN
+save "wm" , replace
+
+use "hh" , clear
+sort HH1 HH2
+save "hh" , replace
+
+use "ch" , clear
+sort HH1 HH2 LN
+save "ch" , replace
+
+
+merge using wm.dta
+tab _merge
+keep if _merge == 3
+save "ch" , replace
+drop _merge
+
+merge using hh.dta
+tab _merge
+keep if _merge == 3
+save "ch" , replace
+drop _merge
+
+********************************************************************************
+*WEIGHT, STRATA, CLUSTER VARIABLE FOR THE APPENDED DATA
+********************************************************************************
+gen wgt=chweight
+svyset [pw=wgt],psu(HH1) strata(stratum)
+
+********************************************************************************
+*Inclusion and Exclusion
+********************************************************************************
+
+
+#Residence
+tab HH6
+gen residence = .
+replace residence = 0 if HH6== 1 
+replace residence = 1 if HH6== 2
+label define residence 1 "Rural" 0 "Urban"
+label values residence residence
+tab residence
+keep if residence == 0
+
+
+#Diarrheaoutcome and key predictor
+svy: tab CA1
+gen diarrhea =CA1
+recode diarrhea 1=1
+recode diarrhea 2=0
+recode diarrhea 8/9=.
+drop if diarrhea ==.
+label define diarrhea 1 "Yes" 0 "No"
+label values diarrhea diarrhea
+tab diarrhea
+
+
+#household water test (100ml)
+replace WQ26 = . if WQ26 == 991
+replace WQ26 = . if WQ26 == 992
+drop if WQ26 == .
+gen hhwq = .
+replace hhwq = 0 if WQ26 == 0
+replace hhwq = 1 if inlist(WQ26, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+replace hhwq = 2 if WQ26>10
+label define hhwqlabel 0 "Low" 1 "Moderate" 2 "High"
+label values hhwq hhwqlabel
+tab hhwq 
+svy: tab hhwq diarrhea, count 
+svy: tab hhwq diarrhea, row
+
+
+#Child Age
+tab CAGE_11
+svy: tab CAGE_11 diarrhea, count 
+svy: tab CAGE_11 diarrhea, row
+
+
+#Child sex
+gen csex = .
+replace csex = 0 if HL4 == 1
+replace csex = 1 if HL4 == 2
+label define csexlabel 0 "Male" 1 "Female"
+label values csex csexlabel
+svy: tab csex residence, count 
+svy: tab csex residence, row
+
+
+#Height for Age Stunned.
+tab HAZ2
+replace HAZ2=. if HAZ2==99.97 | HAZ2==99.98 | HAZ2==99.99
+tab HAZ2
+gen stunned = .
+replace stunned = 0 if HAZ2<= -2
+replace stunned = 1 if HAZ2> -2
+label define stunned 0 "Yes" 1 "No" 
+label values stunned stunned
+svy: tab stunned residence, count 
+svy: tab stunned residence, row
+
+
+#Weight for Age Wasted
+tab WHZ2
+replace WHZ2=. if WHZ2==99.97 | WHZ2==99.98 | WHZ2==99.99
+tab WHZ2
+gen wasted = .
+replace wasted = 0 if WHZ2<= -2
+replace wasted = 1 if WHZ2> -2
+label define wasted 0 "Yes" 1 "No" 
+label values wasted wasted
+svy: tab wasted residence, count 
+svy: tab wasted residence, row
+
+
+*Inadequate supervision.
+recode EC3A 8=.
+recode EC3A 9=.
+recode EC3B 8=.
+recode EC3B 9=.
+generate IS1    = .
+replace  IS1    = 0 if (EC3A == 0) 
+replace  IS1    = 1 if (EC3A == 1) 
+replace  IS1    = 1 if (EC3A == 2) 
+replace  IS1    = 1 if (EC3A == 3) 
+replace  IS1    = 1 if (EC3A == 4)
+replace  IS1    = 1 if (EC3A == 5)  
+replace  IS1    = 1 if (EC3A == 6) 
+replace  IS1    = 1 if (EC3A == 7)
+
+replace  IS1    = 0 if (EC3B == 0) 
+replace  IS1    = 1 if (EC3B == 1) 
+replace  IS1    = 1 if (EC3B == 2) 
+replace  IS1    = 1 if (EC3B == 3) 
+replace  IS1    = 1 if (EC3B == 4)
+replace  IS1    = 1 if (EC3B == 5)  
+replace  IS1    = 1 if (EC3B == 6) 
+replace  IS1    = 1 if (EC3B == 7)
+
+tab IS1
+label define IS1 1 "Yes" 0 "No"
+label values IS IS1
+svy: tab IS
+tab IS residence, row
+svy: tab IS residence, row
+
+
+#Salt Iodization
+replace SA1=. if SA1==99 | SA1==9
+tab SA1
+gen si = .
+replace si = 0 if SA1<=1
+replace si = 1 if SA1==2 
+replace si = 1 if SA1==3 
+replace si = 0 if SA1>3 
+label define si 0 "No" 1 "Yes" 
+label values si si
+svy: tab si residence, count 
+svy: tab si residence, row
+
+
+#Education
+tab melevel
+replace melevel=. if melevel==9
+
+gen mel = melevel
+recode mel 0 = 0
+recode mel 1 = 1
+recode mel 2 = 2
+recode mel 3 = 3
+label define mel 0 "Pre-primary or none" 1 "Primary" 2 "Secondary" 3 "Higher secondary+"
+label values mel mel
+svy: tab mel residence, count 
+svy: tab mel residence, row
+
+
+#Mother Age
+tab WAGE
+gen mage = .
+replace mage = 0 if WAGE==1
+replace mage = 1 if WAGE==2
+replace mage = 2 if WAGE==3
+replace mage = 3 if WAGE==4
+replace mage = 4 if WAGE==5
+replace mage = 4 if WAGE==6
+replace mage = 4 if WAGE==7
+label define mage 0 "15-19" 1 "20-34" 2 "20-34" 3 "20-34" 4 "35+"
+label values mage mage
+svy: tab mage residence, count 
+svy: tab mage residence, row
+
+
+#househol member
+tab HH48
+replace HH48=. if HH48==9
+tab HH48
+gen hhmem = .
+replace hhmem = 0 if HH48<5
+replace hhmem = 1 if HH48>=5
+label define hhmem 0 "Small" 1 "Large" 
+label values hhmem hhmem
+svy: tab hhmem residence, count 
+svy: tab hhmem residence, row
+
+
+#Wealth index Status
+tab windex5
+replace windex5=. if windex5==9
+gen windex = windex5
+recode windex 1= 0
+recode windex 2= 0
+recode windex 3= 1
+recode windex 4= 2
+recode windex 5= 2
+label define windex 0 "Poor" 1 "Middle" 2 "Rich" 
+label values windex windex
+svy: tab windex residence, count 
+svy: tab windex residence, row
+
+
+#Religion
+replace HC1A=. if HC1A==9
+tab HC1A
+gen religion = HC1A
+recode religion 1 = 0
+recode religion 2 = 1
+recode religion 3 = 1
+recode religion 4 = 1
+label define religion 0 "Islam" 1 "Others" 
+label values religion religion
+svy: tab religion residence, count 
+svy: tab religion residence, row
+
+
+#household Head sex
+gen hhsex = .
+replace hhsex = 0 if HHSEX==1
+replace hhsex = 1 if HHSEX==2
+label define hhsex 0 "Male" 1 "Female"
+label values hhsex hhsex
+svy: tab religion residence, count 
+svy: tab religion residence, row
+
+
+#Household own any animals
+tab HC17
+replace HC17=. if HC17==9
+tab HC17
+gen animal = .
+replace animal = 0 if HC17==1
+replace animal = 1 if HC17==2
+label define animal 0 "Yes" 1 "No" 
+label values animal animal
+svy: tab animal residence, count 
+svy: tab animal residence, row
+
+
+#Division
+gen division = .
+replace division = 0 if HH7==10
+replace division = 1 if HH7==20
+replace division = 2 if HH7==30
+replace division = 3 if HH7==40
+replace division = 4 if HH7==45
+replace division = 5 if HH7==50
+replace division = 6 if HH7==55
+replace division = 7 if HH7==60
+label define division 0 "Barisal" 1 "Chattogram" 2 "Dhaka" 3 "Khulna" 4 "Mymensingh" 5 "Rajshahi" 6 "Rangpur" 7 "Sylhet"
+label values division division
+svy: tab division residence, count 
+svy: tab division residence, row
+
+
+#Type of toilet facility
+replace WS11=. if WS11==99
+tab WS11
+gen tf = .
+replace tf = 0 if WS11<24
+replace tf = 1 if WS11>=24 
+label define tf 0 "Improved" 1 "Unimproved" 
+label values tf tf
+svy: tab tf residence, count 
+svy: tab tf residence, row
+
+
+#Toilet facility shared
+tab WS15
+replace WS15=. if WS15==9
+tab WS15
+gen tfshared = .
+replace tfshared = 0 if WS15==1
+replace tfshared = 1 if WS15==2
+label define tfshared 0 "Yes" 1 "No" 
+label values tfshared tfshared
+svy: tab tfshared residence, count 
+svy: tab tfshared residence, row
+
+
+#source of water.
+replace WQ12 =. if WQ12 == 8
+gen sw = .
+replace sw = 0 if WQ12 == 1
+replace sw = 1 if WQ12 == 2
+replace sw = 2 if WQ12 == 3
+label define swlabel 0 "Direct from source" 1 "Covered container" 2 "Uncovered container"
+label values sw swlabel
+svy: tab sw residence, count 
+svy: tab sw residence, row
+
+
+#Source water type (100ml)
+replace WS1 = . if WS1 == 99
+gen swt = .
+replace swt = 1 if inlist(WS1, 11, 12, 13, 14, 21, 31, 41, 51, 91, 92)
+replace swt = 0 if WS1!= . & WS1 != 11 & WS1 != 12 & WS1 != 13 & WS1 != 14 & WS1 != 21 & WS1 != 31 & WS1 != 41 & WS1 != 51 & WS1 != 91 & WS1 != 92
+label define swtlabel 1 "Improved" 0 "Unimproved"
+label values swt swtlabel
+svy: tab swt residence, count 
+svy: tab swt residence, row
+
+
+#source water test (100ml).
+replace WQ27  = . if WQ27 == 991 | WQ27 ==992
+gen swq = .
+replace swq = 0 if WQ27 == 0
+replace swq = 1 if inlist(WQ27, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+replace swq = 2 if WQ27>10
+label define swqlabel 0 "Low" 1 "Moderate" 2 "High"
+label values swq swqlabel
+tab swq 
+svy: tab swq residence, count 
+svy: tab swq residence, row
+
+
+#Treat water to make safer for drinking
+tab WS9
+replace WS9=. if WS9==8 | WS9==9
+tab WS9
+gen watertreat = .
+replace watertreat = 0 if WS9==1
+replace watertreat = 1 if WS9==2
+label define watertreat 0 "Yes" 1 "No" 
+label values watertreat watertreat
+svy: tab watertreat residence, count 
+svy: tab watertreat residence, row
+
+
+
+
+
+
+
+
+#Adjusted model (Logistic regression model)
+
+
+logit diarrhea i.CAGE_11 i.csex i.mel i.hhmem i.animal i.windex i.swt i.tf i.tfshared i.hhwq i.sw i.swq i.watertreat i.residence i.division, or
+
+predict p
+tabstat p, stats(var) total 
+
+tabstat p if CAGE == 0, stats(var) 
+tabstat p if csex == 0, stats(var)
+tabstat p if hhmem == 0, stats(var)
+tabstat p if animal == 0, stats(var)
+tabstat p if windex == 0, stats(var)
+tabstat p if swt == 0, stats(var)
+tabstat p if tf == 0, stats(var)
+tabstat p if tfshared == 0, stats(var)
+tabstat p if hhwq == 0, stats(var)
+tabstat p if sw == 0, stats(var)
+tabstat p if swq == 0, stats(var)
+tabstat p if watertreat == 0, stats(var)
+tabstat p if residence == 0, stats(var)
+tabstat p if division == 0, stats(var)
+
+tabstat CAGE, stats(var) total #
+
+**Sensitivity indices and social determinants ranking
+
+gen total_variance = .0038656
+
+
+gen si_CAGE = .000545 / total_variance
+gen si_csex = .005087 / total_variance
+gen si_mel = .0021457 / total_variance
+gen si_hhmem = .0051165/ total_variance
+gen si_animal = .0053168 / total_variance
+gen si_windex = .0034062 / total_variance
+gen si_swt = 0.0 / total_variance
+gen si_tf = .0038656 / total_variance
+gen si_tfshared = .0015988 / total_variance
+gen si_hhwq = .0043652 / total_variance
+gen si_sw = 0.0 / total_variance
+gen si_swq = .0036283 / total_variance
+gen si_watertreat = .0055165 / total_variance
+gen si_residence = .0025723 / total_variance
+gen si_division = .0109033 / total_variance
+
+
+tab si_CAGE
+tab si_csex
+tab si_mel
+tab si_hhmem 
+tab si_animal
+tab si_windex 
+tab si_swt
+tab si_tf
+tab si_tfshared
+tab si_hhwq
+tab si_sw
+tab si_swq
+tab si_watertreat
+tab si_residence
+tab si_division
+
+
+egen rank = rank(si_CAGE )
+
+********************************
+***Linear Regression
+********************************
+
+regress diarrhea CAGE_11 csex mel hhmem animal windex swt tf tfshared hhwq sw swq watertreat residence division
+
+
+
+************************************
+*Decomposition
+************************************
+
+******************************************
+*creating dummy variabless
+******************************************
+
+tabulate CAGE_11, generate(CAGE_11)
+tabulate mel,generate(mel)
+tabulate windex,generate(windex)
+tabulate hhwq,generate(hhwq)
+tabulate sw,generate(sw)
+tabulate swq,generate(swq)
+tabulate mage,generate(mage)
+tabulate religion,generate(religion)
+tabulate division,genrankerate(division)
+
+* sort by wealth 
+
+sort windex
+gen id = _n
+sum id 
+gen rank=id/23087
+
+svyset[pw=wgt], strata(stratum) psu(PSU) singleunit(centered)
+
+save "temp1", replace
+
+
+****************
+*approach-2
+****************
+use "temp1", replace
+global X "CAGE_11 csex mel hhmem animal windex swt tf tfshared hhwq sw swq watertreat division"
+
+
+
+regr diarrhea $X [aw=wgt]
+sum diarrhea [aw=wgt]
+sca m_diarrhea=r(mean)
+
+foreach x of global X {
+qui {
+sca b_`x'=_b[`x']
+corr rank `x' [aw=wgt], c
+sca cov_`x'=r(cov_12)
+sum `x' [aw=wgt]
+sca elas_`x'=(b_`x'*r(mean))/m_diarrhea
+sca CI_`x'=2*cov_`x'/r(mean)
+sca con_`x'=elas_`x'*CI_`x'
+sca prcnt_`x'=(con_`x'/CI_`x')*100
+}
+di "`x' elasticity:", elas_`x'
+di "`x' concentration index:", CI_`x'
+di "`x' contribution:", con_`x'
+di "`x' percentage contribution:", prcnt_`x'
+}
+
+
